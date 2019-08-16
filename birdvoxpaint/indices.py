@@ -28,3 +28,10 @@ def maximum_flux(S):
     spectrogram = np.abs(S)**2
     flux = np.abs(np.diff(spectrogram, axis=1))
     return np.max(flux, axis=1)
+
+
+def maximum_pcen(S, **kwargs):
+    spectrogram = np.abs(S)**2
+    kwargs["return_zf"] = True
+    pcen, zf = librosa.pcen(spectrogram, **kwargs)
+    return np.max(pcen, axis=1), zf
