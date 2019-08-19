@@ -1,76 +1,110 @@
+from functools import partial
+
 import librosa
-from librosa.util.exceptions.ParameterError
+import librosa.display
 import numpy as np
 
+import tqdm
+import joblib
 
-def transform(filename=None, y=None, sr=22050,
-        n_fft=256, hop_length=32, frame_length=256, fmin=1000, fmax=10000,
-        indices=[average_energy], segment_duration=10,
-        verbose=False, n_jobs=-1):
+from . import util
+from .indices import *
+from .display import *
 
-    if n_jobs=-1:
-        n_jobs = joblib.cpu_count()
+MAX_JOBS = 40
 
-    if filename is not None:
-        if y is not None:
-            raise ParameterError(
-                'Either y or filename must be equal to None')
-        file_duration = librosa.get_duration(filename=filename)
-        orig_sr = librosa.get_samplerate(filename)
-        block_length = segment_duration * orig_sr * n_jobs
-        y_blocks = librosa.stream(filename, block_length=block_length,
-            frame_length=frame_length, hop_length=hop_length)
-        if sr is None:
-            sr = orig_sr
+def transform(filename=None, y=None, sr=None,
+              frame_length=2048, hop_length=512,
+
+              n_mels=256, fmin=None, fmax=None,
+              time_constant=0.4, use_pcen=True, use_mels=True,
+
+              indices=[average_energy],
+              segment_duration=10,
+              verbose=True, n_jobs=None, return_plot=False):
+    '''Convert audio into a false color spectrogram.
+
+    Arguments:
+        
+    '''
+
+    if not n_jobs or n_jobs < 0: # automatically use available cpus, limited by MAX_JOBS
+        n_jobs = min(joblib.cpu_count(), MAX_JOBS)
+
+    # load audio frames - generates one block at a time
+    y_blocks, sr = util.block_stream(
+        filename, y, sr,
+        frame_length=frame_length, hop_length=hop_length,
+        segment_duration=segment_duration, n_blocks=n_jobs) # yields: batch*time*n_fft
+
+    y_blocks = tqdm.tqdm(y_blocks, disable=not verbose)
+
+    # prepare spectrogram function
+    fft_state = {}
+    _fft_slice = util.freq_slice(fmin, fmax, sr, frame_length)
+    f_spec = partial(spec,
+        n_fft=frame_length, hop_length=hop_length,
+        win_length=frame_length, n_mels=n_mels,
+        sr=sr, fmin=fmin, fmax=fmax,
+        time_constant=time_constant,
+        use_mels=use_mels, use_pcen=use_pcen,
+         _fft_slice=_fft_slice, state=fft_state)
+
+    # convert audio blocks to spectrograms
+    S_blocks = (f_spec(y) for y in y_blocks) # yields: freq, time*batch
+
+    # calculate the number of frames in a segment (segment == block length / n_jobs)
+    segment_length = util.sample2frame(max(segment_duration * sr, frame_length), frame_length, hop_length)
+
+    # break spectrogram into blocks and apply indices
+    S = util.apply_indices(S_blocks, indices, segment_length, n_jobs=n_jobs)
+
+    if return_plot:
+        # for convenience, compose the plotting function with all of the arguments passed. DRY!
+        plot_ = partial(specshow,
+            sr=sr, segment_duration=segment_duration,
+            fmin=fmin, fmax=fmax,
+            y_axis='mels' if use_mels else 'frequency')
+        return S, plot_
+    return S
+
+
+def spec(y, sr, n_fft,
+         win_length, hop_length,
+         n_mels=128, time_constant=1,
+         fmin=0, fmax=None,
+         use_mels=False, use_pcen=False,
+         _fft_slice=None, state=None):
+    state = state if state is not None else {}
+
+    # mel spectrogram
+    if use_mels:
+        S = librosa.feature.melspectrogram(
+            y, sr, n_fft=n_fft, hop_length=hop_length,
+            win_length=win_length, center=False,
+            n_mels=n_mels,
+            fmin=fmin or 0,
+            fmax=fmax or None, power=1)
+
+
     else:
-        if (y is None) or (sr is None):
-            raise ParameterError(
-                'At least one of (y, sr) or filename must be provided')
-        librosa.util.valid_audio(y, mono=True)
-        block_length = segment_duration * sr * n_jobs
-        file_duration = librosa.get_duration(y=y, sr=sr)
-        y_blocks = librosa.util.frame(y,
-            frame_length=block_length, hop_length=block_length)
+        # base spectrogram
+        S = librosa.stft(y, n_fft=n_fft, hop_length=hop_length,
+                         win_length=win_length, center=False)
 
-    if fmin < 0:
-        raise ParameterError("fmin={} must be nonnegative".format(fmin))
+        # NOTE: I'm passing _fft_slice so that we don't need to repetitively calculate it,
+        #       but we can also just do: `S[util.freq_slice(fmin, fmax, sr, frame_length)]`
+        #       if we prefer that style.
+        S = S[_fft_slice or slice(None)]
+        S = np.abs(S)
 
-    if fmax > (sr/2):
-        raise ParameterError(
-            "fmax={} must be smaller than sample rate sr={}".format(fmax, sr))
+    if use_pcen:
+        # TODO: this isn't working ? I think it has something to do with the windowing not lining up
+        S, state['zf'] = librosa.core.pcen(
+            S * (2**31), sr=sr, hop_length=hop_length,
+            time_constant=time_constant, max_size=1,
+            axis=-1, zi=state.get('zf'), return_zf=True)
 
-    n_indices = len(indices)
-    n_blocks = int(np.ceil(file_duration / block_duration))
-    fft_frequencies = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
-    bin_start = np.where(fft_frequencies>=fmin)[0][0]
-    bin_stop = np.where(fft_frequencies<fmax)[0][-1]
-    n_freqs = bin_stop - bin_start
-    feature_map = joblib.delayed(
-        lambda x: np.stack([feature_lambda(x) for feature_lambda in indices]))
-    joblib_parallel = joblib.Parallel(n_jobs=n_jobs)
-    X_list = []
-
-    for block_id in tqdm.tqdm(range(n_blocks), disable=not verbose):
-        if filename is not None:
-            y_block = next(y_blocks)
-            librosa.util.valid_audio(y_block, mono=True)
-            if sr!=orig_sr:
-                y_block = librosa.resample(y_block, orig_sr, sr)
-        else:
-            y_block = y_blocks[:, block_id]
-        S = librosa.stft(y_block, n_fft=n_fft,
-            hop_length=hop_length, win_length=frame_length, center=False)
-        truncated_length = (S_tensor.shape[1]//segment_length) * segment_length
-        if truncated_length == 0:
-            continue
-        else:
-            S = S[bin_start:bin_stop, :truncated_length]
-        S_tensor = np.reshape(S.T, (-1, segment_length, n_freqs)).T
-        n_segments = S_tensor.shape[2]
-        job_generator = (feature_map(S_tensor[:, :, segment_id])
-            for segment_id in range(n_segments))
-        X_list.append(np.stack(joblib_parallel(job_generator), axis=-1))
-
-    X_tensor = np.concatenate(X_list, axis=-1)
-
-    return X_tensor
+    # NOTE: I moved the square into here seeing as every index we had expected power not magnitude
+    S = S**2
+    return S
