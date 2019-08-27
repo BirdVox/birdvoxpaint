@@ -1,10 +1,10 @@
 import setuptools
 
 setuptools.setup(name='birdvoxpaint',
-                 version='0.1.0',
+                 version='0.2.0-dev0',
                  description='Bird Vox False-Color Spectrograms',
                  long_description=open('README.md').read().strip(),
-                 author='Phincho Sherpa, Vincent Lostanlen',
+                 author='Phincho Sherpa, Vincent Lostanlen, Bea Steers',
                  author_email='vincent.lostanlen@nyu.edu',
                  # url='http://path-to-my-packagename',
                  packages=setuptools.find_packages(),
@@ -22,4 +22,5 @@ setuptools.setup(name='birdvoxpaint',
                  },
                  license='MIT License',
                  zip_safe=True,
-                 keywords='acoustic detection bird calls false color spectrogram librosa')
+                 keywords=('acoustic detection bird calls fault identification '
+                           'false color spectrogram librosa'))
