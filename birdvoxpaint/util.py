@@ -175,6 +175,8 @@ def apply_indices(S, indices, segment_length, n_jobs=1):
     S_blocks = (spec_frame(spec, segment_length) for spec in S) # yields: block, freq, time
 
     # allow user to pass a custom indices function - or as a list of functions
+    # NOTE: we use `binder` here so that index functions can have a state dict 
+    #       if they want to, but omit it if they don't
     if callable(indices):
         calc_indices = binder(indices, state={})
     else:
@@ -182,7 +184,7 @@ def apply_indices(S, indices, segment_length, n_jobs=1):
         calc_indices = lambda x: np.stack([f(x) for f in indices], axis=-1)
 
     # build job to calculate indices
-    if n_jobs == 1:
+    if n_jobs > 1:
         jobs = joblib.Parallel(n_jobs=n_jobs)
         calc_indices = joblib.delayed(calc_indices)
     else:
@@ -202,6 +204,7 @@ def _shape(X):
         print(x.shape)
         yield x
 
+# TODO: cache this instead of pre-calling it in `transform`
 def freq_slice(fmin, fmax, sr, n_fft):
     '''Calculate the slice needed to select a frequency band.
 
@@ -286,6 +289,17 @@ def binder(__func__=None, __cfg__=None, **kw):
                 if i_want_to_reset_the_state:
                     for f in funcs:
                         f.cfg_['state'] = {}
+                        
+    NOTE: As I've matured, maybe a simpler solution would be to do:
+    
+      def my_pcen_index():
+        state = {}
+        def calc(S): 
+          state['z'] = ...
+        calc.state = state
+        return calc
+        
+      transform(..., indices=[my_max_index, my_pcen_index()])
     '''
 
     def outer(func):
@@ -298,15 +312,11 @@ def binder(__func__=None, __cfg__=None, **kw):
             cfg.update({k: __cfg__[k] for k in avail_args & set(__cfg__)})
         if kw:
             cfg.update({k: kw[k] for k in avail_args & set(kw)})
-
-        func.cfg_ = cfg
-        # TODO: allow mutations from the original bound dictionary `config` to
-        #       propagate to function. Which would also allow functions
-        #       to share a state.
-
+        
         @wraps(func)
         def inner(*a, **kw):
-            return func(*a, **dict(func.cfg_, **kw))
+            return func(*a, **dict(cfg, **kw))
+        inner.cfg_ = cfg
         return inner
 
     return outer(__func__) if __func__ is not None else outer
