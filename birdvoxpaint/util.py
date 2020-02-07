@@ -38,16 +38,17 @@ def block_stream(filename=None, y=None, sr=None,
 
         # see: https://librosa.github.io/librosa/_modules/librosa/core/audio.html#stream
         # block_length is in units of `frames` so reverse calculation
-        block_length = max(segment_duration * orig_sr, frame_length)
+        block_length = max(segment_duration * orig_sr, frame_length) * n_blocks
         block_n_frames = librosa.core.samples_to_frames(
             block_length, frame_length, hop_length)
-
-        n_total = duration * orig_sr / librosa.core.frames_to_samples(
-            block_n_frames, frame_length, hop_length)
-        n_total = int(n_total / n_blocks)
-
+        block_length = librosa.core.frames_to_samples(
+            block_n_frames, frame_length, hop_length) 
+        
+        # used for the progress bar
+        n_total = int(duration * orig_sr / block_length)
+        
         y_blocks = librosa.stream(filename,
-            block_length=block_n_frames * n_blocks,
+            block_length=block_n_frames, 
             frame_length=frame_length,
             hop_length=hop_length)
 
