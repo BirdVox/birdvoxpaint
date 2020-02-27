@@ -35,14 +35,13 @@ def maximum_flux(S):
     return np.max(flux, axis=1)
 
 
-def maximum_pcen(S, state, **kwargs):
+def maximum_pcen(S, **kwargs):
     S = np.abs(S)**2
-    pcen, state['zf'] = librosa.pcen(
-        S, return_zf=True, zi=state.get('zf'), **kwargs)
+    pcen = librosa.pcen(S, **kwargs)
     return np.max(pcen, axis=1)
 
 
 def average_pcen(S, state, **kwargs):
     S = np.abs(S)**2
-    pcen, state['zf'] = librosa.pcen(S, return_zf=True, **kwargs)
+    pcen = librosa.pcen(S, **kwargs)
     return np.mean(pcen, axis=1)
