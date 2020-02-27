@@ -29,7 +29,7 @@ def transform(filename=None,
         n_jobs = joblib.cpu_count()
 
     # measure sample rate and segment length
-    sr = sf.SoundFile(filename).samplerate
+    sr = librosa.get_samplerate(filename)
     segment_length = segment_duration * sr
     n_frames_per_segment = int(segment_length/frame_length)
 
@@ -39,7 +39,7 @@ def transform(filename=None,
 
     # create a librosa generator object to loop through blocks
     librosa_generator = librosa.core.stream(
-        filename, n_frames_per_segment, frame_length, hop_length)
+        filename, n_frames_per_segment, frame_length, segment_length)
 
     # measure duration of the recording
     total_duration = librosa.get_duration(filename=filename)
