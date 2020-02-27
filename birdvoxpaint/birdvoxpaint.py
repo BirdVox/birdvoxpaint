@@ -62,8 +62,11 @@ def transform(filename=None,
          _fft_slice=slice_fun)
 
     # define a closure for computing acoustic indices of a segment y.
-    indices_fun = lambda y: [np.stack(
-        [acoustic_index(S) for acoustic_index in indices], axis=-1)
+    # note that we use librosa.util.stack instead of np.stack
+    # to combine acoustic indices. This is to preserve
+    # Fortrang contiguity.
+    indices_fun = lambda y: [librosa.util.stack(
+        [acoustic_index(S) for acoustic_index in indices], axis=0)
         for S in [spec_fun(y)]][0]
 
     # delay execution of the closure above
@@ -76,7 +79,7 @@ def transform(filename=None,
     parallel_fun = joblib.Parallel(n_jobs=n_jobs)
 
     # execute
-    S = np.stack(parallel_fun(joblib_generator))
+    S = np.concatenate(parallel_fun(joblib_generator), axis=-1)
 
     return S
 
