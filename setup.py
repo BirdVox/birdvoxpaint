@@ -14,6 +14,7 @@ setuptools.setup(name='birdvoxpaint',
                  install_requires=[
                     'librosa>=0.7.0',
                     'matplotlib',
+                    'tqdm'
                  ],
                  entry_points={
                         # 'console_scripts': [
