@@ -36,29 +36,3 @@ def freq_slice(fmin, fmax, sr, n_fft):
     bin_start = np.where(fft_frequencies >= fmin)[0][0] if fmin else None
     bin_stop = np.where(fft_frequencies < fmax)[0][-1] if fmax else None
     return slice(bin_start, bin_stop)
-
-
-
-DAY = 60*60*24
-MONTH = DAY * 30
-def format_based_on_scale(t, scale, offset=None):
-    '''Convert seconds to a formatted time string of some semantic format.
-
-    For example, if the overall scale of the axis is only an hour, we don't
-    care about showing the year so we can format the time to only show minute, second, etc.
-    '''
-    if offset:
-        t = datetime.datetime.fromtimestamp(t + offset)
-
-        if scale < DAY:
-            return t.strftime('%H:%M:%S')
-        if scale < 2*DAY:
-            return t.strftime('%d %H:')
-        elif scale < MONTH:
-            return t.strftime('%m/%d')
-        else:
-            return t.strftime('%m/%d/%Y')
-    else:
-        if t < 0: # TODO: use librosa.display.TimeFormatter here ?
-            return '-' + str(datetime.timedelta(seconds=-t))
-        return str(datetime.timedelta(seconds=t))
