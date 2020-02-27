@@ -6,15 +6,14 @@ import librosa.display
 import numpy as np
 import tqdm
 
-from . import util
-from .indices import *
+from . import indices, util
 from .display import *
 
 
 def transform(filename=None,
               frame_length=2048, hop_length=512,
               n_mels=None, fmin=None, fmax=None,
-              indices=[average_energy],
+              indices=[indices.average_energy],
               segment_duration=10,
               verbose=True, n_jobs=None):
     '''Extract spectrotemporal acoustic indices in a monophonic audio file
