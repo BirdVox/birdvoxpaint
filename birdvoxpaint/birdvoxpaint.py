@@ -37,7 +37,7 @@ def transform(
     # measure sample rate and segment length
     sr = librosa.get_samplerate(filename)
     segment_length = segment_duration * sr
-    n_frames_per_segment = int(segment_length / frame_length)
+    n_frames_per_segment = int(segment_length / hop_length)
 
     # adjust segment_duration so that it matches the unit roundoff
     # of the Euclidean division above
@@ -47,8 +47,8 @@ def transform(
     librosa_generator = librosa.core.stream(
         filename,
         block_length=n_frames_per_segment,
-        frame_length=segment_length,
-        hop_length=segment_length,
+        frame_length=frame_length,
+        hop_length=hop_length,
         fill_value=0,
     )
 
