@@ -41,7 +41,7 @@ def maximum_pcen(S, **kwargs):
     return np.max(pcen, axis=1)
 
 
-def average_pcen(S, state, **kwargs):
+def average_pcen(S, **kwargs):
     S = np.abs(S)**2
     pcen = librosa.pcen(S, **kwargs)
     return np.mean(pcen, axis=1)
