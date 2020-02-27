@@ -79,7 +79,7 @@ def transform(filename=None,
     parallel_fun = joblib.Parallel(n_jobs=n_jobs)
 
     # execute
-    S = librosa.stack(parallel_fun(joblib_generator), axis=-1)
+    S = librosa.util.stack(parallel_fun(joblib_generator), axis=-1)
 
     return S
 
