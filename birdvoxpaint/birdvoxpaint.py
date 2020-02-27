@@ -1,19 +1,17 @@
 from functools import partial
 
+import joblib
 import librosa
 import librosa.display
 import numpy as np
-
-from tqdm.auto import tqdm
-import joblib
+import tqdm
 
 from . import util
 from .indices import *
 from .display import *
 
-MAX_JOBS = 40
 
-def transform(filename=None, y=None, sr=None,
+def transform(filename=None,
               frame_length=2048, hop_length=512,
               n_mels=None, fmin=None, fmax=None,
               indices=[average_energy],
@@ -25,34 +23,59 @@ def transform(filename=None, y=None, sr=None,
 
     '''
 
-    if not n_jobs or n_jobs < 0: # automatically use available cpus, limited by MAX_JOBS
-        n_jobs = min(joblib.cpu_count(), MAX_JOBS)
+    # if n_jobs is None or -1, parallelize across all available CPUs
+    if not n_jobs or n_jobs < 0:
+        n_jobs = joblib.cpu_count()
 
-    # load audio frames - generates one block at a time
-    y_blocks, n_blocks, sr = util.block_stream(
-        filename, y, sr,
-        frame_length=frame_length, hop_length=hop_length,
-        segment_duration=segment_duration, n_blocks=n_jobs) # yields: batch*time*n_fft
+    # measure sample rate and segment length
+    sr = sf.SoundFile(filename).samplerate
+    segment_length = segment_duration * sr
+    n_frames_per_segment = int(segment_length/frame_length)
 
-    y_blocks = tqdm(y_blocks, total=n_blocks, disable=not verbose)
+    # adjust segment_duration so that it matches the unit roundoff
+    # of the Euclidean division above
+    segment_duration = n_frames_per_segment * frame_length
 
-    # prepare spectrogram function
-    _fft_slice = util.freq_slice(fmin, fmax, sr, frame_length)
-    f_spec = partial(spec,
+    # create a librosa generator object to loop through blocks
+    librosa_generator = librosa.core.stream(
+        filename, n_frames_per_segment, frame_length, hop_length)
+
+    # measure duration of the recording
+    total_duration = librosa.get_duration(filename=filename)
+    n_segments = int(total_duration / segment_duration)
+
+    # contruct tqdm generator from librosa generator
+    # this allows to display a progress bar
+    tqdm_generator = tqdm.tqdm(librosa_generator, total=n_segments, disable=not verbose)
+
+    # define frequency slicing function
+    # this function reduces the STFT or melspectrogram to a
+    # specific subband [fmin, fmax], measured in Hertz.
+    slice_fun = util.freq_slice(fmin, fmax, sr, frame_length)
+
+    # define spectrogram function.
+    spec_fun = partial(spec,
         n_fft=frame_length, hop_length=hop_length,
         win_length=frame_length, n_mels=n_mels,
         sr=sr, fmin=fmin, fmax=fmax,
-         _fft_slice=_fft_slice)
+         _fft_slice=slice_fun)
 
-    # convert audio blocks to spectrograms
-    S_blocks = (f_spec(y) for y in y_blocks) # yields: freq, time*batch
+    # define a closure for computing acoustic indices of a segment y.
+    indices_fun = lambda y: lambda acoustic_index: [np.stack(
+        [acoustic_index(S) for acoustic_index in indices], axis=-1)
+        for S in [spec_fun(y)]][0]
 
-    # calculate the number of frames in a segment (segment == block length / n_jobs)
-    segment_length = librosa.core.samples_to_frames(
-        max(segment_duration * sr, frame_length), frame_length, hop_length)
+    # delay execution of the closure above
+    delayed_indices_fun = joblib.delayed(indices_fun)
 
-    # break spectrogram into blocks and apply indices
-    S = util.apply_indices(S_blocks, indices, segment_length, n_jobs=n_jobs)
+    # construct joblib generator from delayed joblib object.
+    joblib_generator = (delayed_indices_fun(y) for y in tqdm_generator)
+
+    # construct joblib Parallel object.
+    parallel_fun = joblib.Parallel(n_jobs=n_jobs)
+
+    # execute
+    S = np.stack(parallel_fun(joblib_generator))
 
     return S
 

@@ -40,15 +40,15 @@ def block_stream(filename=None, y=None, sr=None,
         # block_length is in units of `frames` so reverse calculation
         block_length = max(segment_duration * orig_sr, frame_length) * n_blocks
         block_n_frames = librosa.core.samples_to_frames(
-            block_length, frame_length, hop_length)
+            block_length, hop_length)
         block_length = librosa.core.frames_to_samples(
-            block_n_frames, frame_length, hop_length) 
-        
+            block_n_frames, hop_length)
+
         # used for the progress bar
         n_total = int(duration * orig_sr / block_length)
-        
+
         y_blocks = librosa.stream(filename,
-            block_length=block_n_frames, 
+            block_length=block_n_frames,
             frame_length=frame_length,
             hop_length=hop_length)
 
@@ -68,9 +68,9 @@ def block_stream(filename=None, y=None, sr=None,
         # get block length, make it evenly divisible into frames (with hop)
         block_length = max(segment_duration * sr, frame_length) * n_blocks # min block size = 1 frame
         block_length = librosa.core.samples_to_frames(
-            block_length, frame_length, hop_length) # convert to even frames
+            block_length, hop_length) # convert to even frames
         block_length = librosa.core.frames_to_samples(
-            block_length, frame_length, hop_length) # convert back
+            block_length, hop_length) # convert back
 
         # get frames from array
         y_blocks = librosa.util.frame(y, block_length, block_length).T
@@ -176,7 +176,7 @@ def apply_indices(S, indices, segment_length, n_jobs=1):
     S_blocks = (spec_frame(spec, segment_length) for spec in S) # yields: block, freq, time
 
     # allow user to pass a custom indices function - or as a list of functions
-    # NOTE: we use `binder` here so that index functions can have a state dict 
+    # NOTE: we use `binder` here so that index functions can have a state dict
     #       if they want to, but omit it if they don't
     if callable(indices):
         calc_indices = binder(indices, state={})
@@ -290,16 +290,16 @@ def binder(__func__=None, __cfg__=None, **kw):
                 if i_want_to_reset_the_state:
                     for f in funcs:
                         f.cfg_['state'] = {}
-                        
+
     NOTE: As I've matured, maybe a simpler solution would be to do:
-    
+
       def my_pcen_index():
         state = {}
-        def calc(S): 
+        def calc(S):
           state['z'] = ...
         calc.state = state
         return calc
-        
+
       transform(..., indices=[my_max_index, my_pcen_index()])
     '''
 
@@ -313,7 +313,7 @@ def binder(__func__=None, __cfg__=None, **kw):
             cfg.update({k: __cfg__[k] for k in avail_args & set(__cfg__)})
         if kw:
             cfg.update({k: kw[k] for k in avail_args & set(kw)})
-        
+
         @wraps(func)
         def inner(*a, **kw):
             return func(*a, **dict(cfg, **kw))
