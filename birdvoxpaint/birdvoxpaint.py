@@ -62,7 +62,7 @@ def transform(filename=None,
          _fft_slice=slice_fun)
 
     # define a closure for computing acoustic indices of a segment y.
-    indices_fun = lambda y: lambda acoustic_index: [np.stack(
+    indices_fun = lambda y: [np.stack(
         [acoustic_index(S) for acoustic_index in indices], axis=-1)
         for S in [spec_fun(y)]][0]
 
