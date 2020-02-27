@@ -22,15 +22,15 @@ def freq_slice(fmin, fmax, sr, n_fft):
         slice(i[fmin], i[fmax])
     '''
     if not sr or not n_fft:
-        raise ParameterError(
-            "You must set a sr=({}) and n_fft=({})".format(sr, n_fft))
+        raise ParameterError("You must set a sr=({}) and n_fft=({})".format(sr, n_fft))
 
     if fmin and fmin < 0:
         raise ParameterError("fmin={} must be nonnegative".format(fmin))
 
-    if fmax and fmax > (sr/2):
+    if fmax and fmax > (sr / 2):
         raise ParameterError(
-            "fmax={} must be smaller than nyquist, f={}".format(fmax, sr))
+            "fmax={} must be smaller than nyquist, f={}".format(fmax, sr)
+        )
 
     fft_frequencies = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
     bin_start = np.where(fft_frequencies >= fmin)[0][0] if fmin else None

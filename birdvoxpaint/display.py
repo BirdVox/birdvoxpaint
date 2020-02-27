@@ -5,11 +5,20 @@ import matplotlib.gridspec as gridspec
 from . import util
 
 
-def specshow(S, sr, period=60, offset=0,
-             segment_duration=10, date_offset=None,
-             fmin=0, fmax=None,
-             row_height=None, normalize=False,
-             x_axis=None, y_axis=None):
+def specshow(
+    S,
+    sr,
+    period=60,
+    offset=0,
+    segment_duration=10,
+    date_offset=None,
+    fmin=0,
+    fmax=None,
+    row_height=None,
+    normalize=False,
+    x_axis=None,
+    y_axis=None,
+):
     '''Plot a false color spectrogram (or any long spectrogram for that matter).
 
     Arguments:
@@ -17,14 +26,14 @@ def specshow(S, sr, period=60, offset=0,
         sr (int):
     '''
     nfreq, nseg, nidxs = S.shape
-    if nidxs == 1: # use cmap
-        S = S[:,:,0]
+    if nidxs == 1:  # use cmap
+        S = S[:, :, 0]
 
-    if normalize: # imshow expects floats to be in [0, 1]
+    if normalize:  # imshow expects floats to be in [0, 1]
         S = (S - S.min()) / (S.max() - S.min())
 
-    duration = nseg * segment_duration # total duration of spectrogram
-    n_blank, offset = divmod(offset, period) # remove blank rows from offset
+    duration = nseg * segment_duration  # total duration of spectrogram
+    n_blank, offset = divmod(offset, period)  # remove blank rows from offset
     smin, smax = S.min(), S.max()
 
     nrows = int(np.ceil((duration + offset) / period))
@@ -41,12 +50,17 @@ def specshow(S, sr, period=60, offset=0,
 
         # get the spectrogram row
         j, k = (i * period - offset), ((i + 1) * period - offset)
-        S_i = S[:,max(int(j / segment_duration), 0):
-                      int(k / segment_duration)]
+        S_i = S[:, max(int(j / segment_duration), 0) : int(k / segment_duration)]
 
-
-        plt.imshow(S_i, cmap='magma', aspect='auto', origin='lower', vmin=smin, vmax=smax,
-                   extent=[max(0, j), min(duration, k), fmin, fmax])
+        plt.imshow(
+            S_i,
+            cmap='magma',
+            aspect='auto',
+            origin='lower',
+            vmin=smin,
+            vmax=smax,
+            extent=[max(0, j), min(duration, k), fmin, fmax],
+        )
         plt.xlim([j, k])
 
         # format the x axis labels
