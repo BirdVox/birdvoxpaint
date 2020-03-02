@@ -70,7 +70,7 @@ def towsey_rgb(S, **kwargs):
 
     # Compute count of acoustic event count as proportion of frames above background noise.
     acoustic_event_threshold = 2.0 * background_noise_level
-    acoustic_event_count = np.mean(S > acoustic_event_threshold, axis=1)
+    acoustic_event_count = np.mean(S > acoustic_event_threshold[:, np.newaxis], axis=1)
 
     # Stack ACI, ENT, and CVR into a tensor.
     rgb_tensor = np.stack([
