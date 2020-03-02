@@ -76,9 +76,7 @@ def towsey_rgb(S, **kwargs):
     acoustic_event_count = np.mean(S > acoustic_event_threshold[:, np.newaxis], axis=1)
 
     # Stack ACI, ENT, and CVR into a tensor.
-    rgb_tensor = np.stack([
-        acoustic_complexity_index,
-        entropy_based_concentration,
-        acoustic_event_count
-    ])
+    rgb_tensor = np.stack(
+        [acoustic_complexity_index, entropy_based_concentration, acoustic_event_count]
+    )
     return rgb_tensor
