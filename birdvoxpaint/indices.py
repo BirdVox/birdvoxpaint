@@ -72,7 +72,7 @@ def towsey_rgb(S, **kwargs):
     entropy_based_concentration = 1 - rowwise_entropy / np.log(S.shape[1])
 
     # Compute count of acoustic event count as proportion of frames above background noise.
-    acoustic_event_threshold = 1.0 * background_noise_level / S.shape[1]
+    acoustic_event_threshold = 2.0 * background_noise_level / S.shape[1]
     acoustic_event_count = np.mean(
         (S > acoustic_event_threshold[:, np.newaxis]), axis=1)
 
