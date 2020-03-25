@@ -12,7 +12,7 @@ setuptools.setup(
     # py_modules=['packagename'],
     # package_data={'asdf': {'*.yaml'}},
     # include_package_data=True,
-    install_requires=['librosa>=0.7.0', 'matplotlib', 'tqdm',],
+    install_requires=['librosa>=0.7.0', 'matplotlib', 'tqdm'],
     entry_points={
         # 'console_scripts': [
         #     'bvpaint = bvpaint.cli:main'
