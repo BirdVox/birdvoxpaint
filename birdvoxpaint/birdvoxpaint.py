@@ -81,9 +81,11 @@ def transform(
     # define a closure for computing acoustic indices of a segment y.
     # note that we use librosa.util.stack instead of np.stack
     # to combine acoustic indices. This is to preserve
-    # Fortrang contiguity.
+    # C contiguity.
     indices_fun = lambda y: [
-        np.concatenate([acoustic_index(S) for acoustic_index in indices], axis=0)
+        librosa.util.stack(
+            [acoustic_index(S) for acoustic_index in indices],
+            axis=-1)
         for S in [spec_fun(y)]
     ][0]
 
@@ -97,7 +99,7 @@ def transform(
     parallel_fun = joblib.Parallel(n_jobs=n_jobs)
 
     # execute
-    S = librosa.util.stack(parallel_fun(joblib_generator), axis=-1)
+    S = librosa.util.stack(parallel_fun(joblib_generator), axis=1)
 
     return S
 

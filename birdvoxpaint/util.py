@@ -45,7 +45,8 @@ MONTH = DAY * 30
 def format_based_on_scale(t, scale, offset=None):
     '''Convert seconds to a formatted time string of some semantic format.
     For example, if the overall scale of the axis is only an hour, we don't
-    care about showing the year so we can format the time to only show minute, second, etc.
+    care about showing the year so we can format the time to only show minute,
+    second, etc.
     '''
     if offset:
         t = datetime.datetime.fromtimestamp(t + offset)
