@@ -5,6 +5,7 @@ setuptools.setup(
     version='0.2.0',
     description='Bird Vox False-Color Spectrograms',
     long_description=open('README.md').read().strip(),
+    long_description_content_type="text/markdown",
     author='Phincho Sherpa, Vincent Lostanlen, Bea Steers',
     author_email='vincent.lostanlen@nyu.edu',
     # url='http://path-to-my-packagename',
