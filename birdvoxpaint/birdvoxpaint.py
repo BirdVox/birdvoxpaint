@@ -83,9 +83,7 @@ def transform(
     # to combine acoustic indices. This is to preserve
     # C contiguity.
     indices_fun = lambda y: [
-        librosa.util.stack(
-            [acoustic_index(S) for acoustic_index in indices],
-            axis=-1)
+        librosa.util.stack([acoustic_index(S) for acoustic_index in indices], axis=-1)
         for S in [spec_fun(y)]
     ][0]
 

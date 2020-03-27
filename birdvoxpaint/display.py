@@ -5,81 +5,68 @@ import matplotlib.gridspec as gridspec
 from . import util
 
 
-def specshow(
-    S,
-    sr,
-    period=60,
-    offset=0,
+def rgbshow(
+    data,
+    x_coords=None,
+    y_coords=None,
+    sr=22050,
     segment_duration=10,
-    date_offset=None,
-    fmin=0,
+    fmin=None,
     fmax=None,
-    row_height=None,
-    normalize=False,
-    x_axis=None,
-    y_axis=None,
+    ax=None,
+    **kwargs
 ):
-    '''Plot a false color spectrogram (or any long spectrogram for that matter).
+    data = np.clip(data, 0, 1)
 
-    Arguments:
-        S (np.ndarray):
-        sr (int):
-    '''
-    nfreq, nseg, nidxs = S.shape
-    if nidxs == 1:  # use cmap
-        S = S[:, :, 0]
+    kwargs.setdefault('rasterized', True)
+    kwargs.setdefault('edgecolors', 'None')
+    kwargs.setdefault('shading', 'flat')
 
-    if normalize:  # imshow expects floats to be in [0, 1]
-        S = (S - S.min()) / (S.max() - S.min())
+    all_params = dict(
+        kwargs=kwargs,
+        sr=sr / 1000,
+        fmin=fmin,
+        fmax=fmax,
+        hop_length=sr / 1000 * segment_duration,
+    )
 
-    duration = nseg * segment_duration  # total duration of spectrogram
-    n_blank, offset = divmod(offset, period)  # remove blank rows from offset
-    smin, smax = S.min(), S.max()
+    # Get the x and y coordinates
+    y_axis = 'hz'
+    y_coords = librosa.display.__mesh_coords(
+        y_axis, y_coords, data.shape[0], **all_params
+    )
+    x_axis = 'time'
+    x_coords = librosa.display.__mesh_coords(
+        x_axis, x_coords, data.shape[1], **all_params
+    )
 
-    nrows = int(np.ceil((duration + offset) / period))
-    fmax = fmax or sr / 2
+    color_tuples = np.array(
+        [data[:, :, 0].flatten(), data[:, :, 1].flatten(), data[:, :, 2].flatten()]
+    ).transpose()
 
-    if row_height:
-        plt.gcf().set_figheight(row_height * nrows)
+    axes = librosa.display.__check_axes(ax)
+    out = axes.pcolormesh(
+        x_coords, y_coords, data[:, :, 0], color=color_tuples, **kwargs
+    )
+    librosa.display.__set_current_image(ax, out)
 
-    # plt.suptitle('{}')
+    axes.set_xlim(x_coords.min(), x_coords.max())
+    axes.set_ylim(y_coords.min(), y_coords.max())
 
-    gs = gridspec.GridSpec(nrows, 1, wspace=0.1, hspace=0.02)
-    for i in range(nrows):
-        ax = plt.subplot(gs[i])
+    # Set up axis scaling
+    librosa.display.__scale_axes(axes, x_axis, 'x')
+    librosa.display.__scale_axes(axes, y_axis, 'y')
 
-        # get the spectrogram row
-        j, k = (i * period - offset), ((i + 1) * period - offset)
-        S_i = S[:, max(int(j / segment_duration), 0) : int(k / segment_duration)]
+    # Construct tickers and locators
+    librosa.display.__decorate_axis(axes.xaxis, x_axis)
+    last_xtick = plt.xticks()[0][-1]
+    if last_xtick < 60:
+        axes.xaxis.set_label_text('Time (s)')
+    elif last_xtick < 3600:
+        axes.xaxis.set_label_text('Time (mm:ss)')
+    else:
+        axes.xaxis.set_label_text('Time (hh:mm:ss)')
+    librosa.display.__decorate_axis(axes.yaxis, y_axis)
+    axes.yaxis.set_label_text('Frequency (kHz)')
 
-        plt.imshow(
-            S_i,
-            cmap='magma',
-            aspect='auto',
-            origin='lower',
-            vmin=smin,
-            vmax=smax,
-            extent=[max(0, j), min(duration, k), fmin, fmax],
-        )
-        plt.xlim([j, k])
-
-        # format the x axis labels
-        tj = util.format_based_on_scale(j - n_blank * period, duration, date_offset)
-        tk = util.format_based_on_scale(k - n_blank * period, duration, date_offset)
-
-        # move the x bounds to the side (uses xlabel)
-        plt.xticks([])
-        plt.yticks([])
-        if x_axis:
-            plt.xlabel('{} to \n{}'.format(tj, tk), ha='left', va='bottom')
-            ax.xaxis.set_label_coords(1.01, 0.01)
-        if y_axis:
-            librosa.display.__scale_axes(ax, y_axis, 'y')
-            librosa.display.__decorate_axis(ax.yaxis, y_axis)
-
-        # remove box
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-
-    # pretty
-    plt.tight_layout()
+    return axes
