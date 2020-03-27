@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='birdvoxpaint',
-    version='0.2.0-dev0',
+    version='0.2.0',
     description='Bird Vox False-Color Spectrograms',
     long_description=open('README.md').read().strip(),
     author='Phincho Sherpa, Vincent Lostanlen, Bea Steers',
