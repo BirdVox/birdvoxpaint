@@ -20,18 +20,27 @@ $ python setup.py install
 
 ## Usage
 
-To analyze a WAV file at location `wav_path`:
+To analyze an audio file:
 
 ```python
+import librosa
 import birdvoxpaint as bvp
+import matplotlib.pyplot as plt
 
+# get the path to the audio file you want to use
+audio_path = librosa.example('nutcracker')
+
+# calculate acoustic indices
 X = bvp.transform(
-    wav_path,
-    indices=[
+    audio_path, segment_duration=3, indices=[
         bvp.acoustic_complexity_index,
         bvp.entropy_based_concentration,
         bvp.acoustic_event_count,
-    ],
-)
+    ])
+
+print(X.shape)
+
+# show
 bvp.rgbshow(X)
+plt.show()
 ```
