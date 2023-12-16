@@ -109,8 +109,8 @@ def spec(
     # mel spectrogram
     if n_mels:
         S = librosa.feature.melspectrogram(
-            y,
-            sr,
+            y=y,
+            sr=sr,
             n_fft=n_fft,
             hop_length=hop_length,
             win_length=win_length,
@@ -124,7 +124,7 @@ def spec(
     else:
         # base spectrogram
         S = librosa.stft(
-            y, n_fft=n_fft, hop_length=hop_length, win_length=win_length, center=False
+            y=y, n_fft=n_fft, hop_length=hop_length, win_length=win_length, center=False
         )
 
         # NOTE: I'm passing _fft_slice so that we don't need to repetitively calculate it,
