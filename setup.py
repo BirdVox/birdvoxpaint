@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='birdvoxpaint',
-    version='0.2.2,
+    version='0.2.2',
     description='Bird Vox False-Color Spectrograms',
     long_description=open('README.md').read().strip(),
     long_description_content_type="text/markdown",
